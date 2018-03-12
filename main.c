@@ -174,7 +174,7 @@ int main(void)
   /* Configure SysTick */
   SysTick_Config(SystemCoreClock/HZ);
 	
-printf("LPC Whetstone @ %u Hz %08X %u\n", 
+	printf("LPC1768 Whetstone @ %u Hz %08X ARMCC:%u\n", 
 	SystemCoreClock, 
 	SCB->CPUID, 
 	__ARMCC_VERSION);
