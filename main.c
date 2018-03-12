@@ -2,85 +2,13 @@
 #include <stdint.h>
 #include "LPC17xx.h"
 
-#define TEST_RUN_N	200
+#include "dhry.h"
 
 #define	HZ	1000
 
+#define RUN_NUMBER	3000000
+
 __IO uint32_t g_Ticks;
-
-/*
- * C Converted Whetstone Double Precision Benchmark
- *		Version 1.2	22 March 1998
- *
- *	(c) Copyright 1998 Painter Engineering, Inc.
- *		All Rights Reserved.
- *
- *		Permission is granted to use, duplicate, and
- *		publish this text and program as long as it
- *		includes this entire comment block and limited
- *		rights reference.
- *
- * Converted by Rich Painter, Painter Engineering, Inc. based on the
- * www.netlib.org benchmark/whetstoned version obtained 16 March 1998.
- *
- * A novel approach was used here to keep the look and feel of the
- * FORTRAN version.  Altering the FORTRAN-based array indices,
- * starting at element 1, to start at element 0 for C, would require
- * numerous changes, including decrementing the variable indices by 1.
- * Instead, the array E1[] was declared 1 element larger in C.  This
- * allows the FORTRAN index range to function without any literal or
- * variable indices changes.  The array element E1[0] is simply never
- * used and does not alter the benchmark results.
- *
- * The major FORTRAN comment blocks were retained to minimize
- * differences between versions.  Modules N5 and N12, like in the
- * FORTRAN version, have been eliminated here.
- *
- * An optional command-line argument has been provided [-c] to
- * offer continuous repetition of the entire benchmark.
- * An optional argument for setting an alternate LOOP count is also
- * provided.  Define PRINTOUT to cause the POUT() function to print
- * outputs at various stages.  Final timing measurements should be
- * made with the PRINTOUT undefined.
- *
- * Questions and comments may be directed to the author at
- *			r.painter@ieee.org
- */
-/*
-C**********************************************************************
-C     Benchmark #2 -- Double  Precision Whetstone (A001)
-C
-C     o	This is a REAL*8 version of
-C	the Whetstone benchmark program.
-C
-C     o	DO-loop semantics are ANSI-66 compatible.
-C
-C     o	Final measurements are to be made with all
-C	WRITE statements and FORMAT sttements removed.
-C
-C**********************************************************************   
-*/
-/* map the FORTRAN math functions, etc. to the C versions */
-#define DSIN	sin
-#define DCOS	cos
-#define DATAN	atan
-#define DLOG	log
-#define DEXP	exp
-#define DSQRT	sqrt
-#define IF		if
-
-/* function prototypes */
-void POUT(long N, long J, long K, double X1, double X2, double X3, double X4);
-void PA(double E[]);
-void P0(void);
-void P3(double X, double Y, double *Z);
-#define USAGE	"usage: whetdc [-c] [loops]\n"
-
-/*
-	COMMON T,T1,T2,E1(4),J,K,L
-*/
-double T,T1,T2,E1[5];
-int J,K,L;
 
 void SysTick_Handler(void)
 {
@@ -96,85 +24,162 @@ void SimpleDelay(uint32_t d)
 	}
 }
 
-
 uint32_t HAL_GetTick(void)
 {
 	return g_Ticks;
 }
 
-void
-PA(double E[])
-{
-	J = 0;
 
-L10:
-	E[1] = ( E[1] + E[2] + E[3] - E[4]) * T;
-	E[2] = ( E[1] + E[2] - E[3] + E[4]) * T;
-	E[3] = ( E[1] - E[2] + E[3] + E[4]) * T;
-	E[4] = (-E[1] + E[2] + E[3] + E[4]) / T2;
-	J += 1;
+/* Global Variables: */
 
-	if (J < 6)
-		goto L10;
-}
+Rec_Pointer     Ptr_Glob,
+                Next_Ptr_Glob;
+int             Int_Glob;
+Boolean         Bool_Glob;
+char            Ch_1_Glob,
+                Ch_2_Glob;
+int             Arr_1_Glob [50];
+int             Arr_2_Glob [50] [50];
 
-void
-P0(void)
-{
-	E1[J] = E1[K];
-	E1[K] = E1[L];
-	E1[L] = E1[J];
-}
-
-void
-P3(double X, double Y, double *Z)
-{
-	double X1, Y1;
-
-	X1 = X;
-	Y1 = Y;
-	X1 = T * (X1 + Y1);
-	Y1 = T * (X1 + Y1);
-	*Z  = (X1 + Y1) / T2;
-}
-
-#ifdef PRINTOUT
-void
-POUT(long N, long J, long K, double X1, double X2, double X3, double X4)
-{
-	printf("%7ld %7ld %7ld %12.4e %12.4e %12.4e %12.4e\n",
-						N, J, K, X1, X2, X3, X4);
-}
+#define REG	register
+	
+#ifndef REG
+        Boolean Reg = false;
+#define REG
+        /* REG becomes defined as empty */
+        /* i.e. no register variables   */
+#else
+        Boolean Reg = true;
 #endif
+
+/* variables for time measurement: */
+
+#ifdef TIMES
+struct tms      time_info;
+extern  int     times (void);
+                /* see library function "times" */
+#define Too_Small_Time (2*HZ)
+                /* Measurements should last at least about 2 seconds */
+#endif
+#ifdef TIME
+extern long     time(long *);
+                /* see library function "time"  */
+#define Too_Small_Time 2
+                /* Measurements should last at least 2 seconds */
+#endif
+#ifdef MSC_CLOCK
+//extern clock_t clock(void);
+#define Too_Small_Time (2*HZ)
+#endif
+
+long            Begin_Time,
+                End_Time,
+                User_Time;
+float           Microseconds,
+                Dhrystones_Per_Second;
+
+/* end of variables for time measurement */
+
+
+void Proc_1 (Rec_Pointer Ptr_Val_Par)
+/******************/
+    /* executed once */
+{
+  REG Rec_Pointer Next_Record = Ptr_Val_Par->Ptr_Comp;
+                                        /* == Ptr_Glob_Next */
+  /* Local variable, initialized with Ptr_Val_Par->Ptr_Comp,    */
+  /* corresponds to "rename" in Ada, "with" in Pascal           */
+
+  structassign (*Ptr_Val_Par->Ptr_Comp, *Ptr_Glob);
+  Ptr_Val_Par->variant.var_1.Int_Comp = 5;
+  Next_Record->variant.var_1.Int_Comp = Ptr_Val_Par->variant.var_1.Int_Comp;
+  Next_Record->Ptr_Comp = Ptr_Val_Par->Ptr_Comp;
+  Proc_3 (&Next_Record->Ptr_Comp);
+    /* Ptr_Val_Par->Ptr_Comp->Ptr_Comp == Ptr_Glob->Ptr_Comp */
+  if (Next_Record->Discr == Ident_1)
+    /* then, executed */
+  {
+    Next_Record->variant.var_1.Int_Comp = 6;
+    Proc_6 (Ptr_Val_Par->variant.var_1.Enum_Comp,
+           &Next_Record->variant.var_1.Enum_Comp);
+    Next_Record->Ptr_Comp = Ptr_Glob->Ptr_Comp;
+    Proc_7 (Next_Record->variant.var_1.Int_Comp, 10,
+           &Next_Record->variant.var_1.Int_Comp);
+  }
+  else /* not executed */
+    structassign (*Ptr_Val_Par, *Ptr_Val_Par->Ptr_Comp);
+} /* Proc_1 */
+
+
+void Proc_2 (One_Fifty *Int_Par_Ref)
+/******************/
+    /* executed once */
+    /* *Int_Par_Ref == 1, becomes 4 */
+{
+  One_Fifty  Int_Loc;
+  Enumeration   Enum_Loc;
+
+  Int_Loc = *Int_Par_Ref + 10;
+  do /* executed once */
+    if (Ch_1_Glob == 'A')
+      /* then, executed */
+    {
+      Int_Loc -= 1;
+      *Int_Par_Ref = Int_Loc - Int_Glob;
+      Enum_Loc = Ident_1;
+    } /* if */
+    while (Enum_Loc != Ident_1); /* true */
+} /* Proc_2 */
+
+
+void Proc_3 (Rec_Pointer *Ptr_Ref_Par)
+/******************/
+    /* executed once */
+    /* Ptr_Ref_Par becomes Ptr_Glob */
+{
+  if (Ptr_Glob != Null)
+    /* then, executed */
+    *Ptr_Ref_Par = Ptr_Glob->Ptr_Comp;
+  Proc_7 (10, Int_Glob, &Ptr_Glob->variant.var_1.Int_Comp);
+} /* Proc_3 */
+
+
+void Proc_4 (void) /* without parameters */
+/*******/
+    /* executed once */
+{
+  Boolean Bool_Loc;
+
+  Bool_Loc = Ch_1_Glob == 'A';
+  Bool_Glob = Bool_Loc | Bool_Glob;
+  Ch_2_Glob = 'B';
+} /* Proc_4 */
+
+
+void Proc_5 (void) /* without parameters */
+/*******/
+    /* executed once */
+{
+  Ch_1_Glob = 'A';
+  Bool_Glob = false;
+} /* Proc_5 */
 
 int main(void)
 {
-
-/* used in the FORTRAN version */
-	long I;
-	long N1, N2, N3, N4, N6, N7, N8, N9, N10, N11;
-	double X1,X2,X3,X4,X,Y,Z;
-	long LOOP;
-	int II, JJ;
-
-	/* added for this version */
-	long loopstart;
-//	long startsec, finisec;
-	uint32_t start_tick, fini_tick;
-	float KIPS;
-	int continuous;
-	
-//On my host PC
-//Loops: 500000, Iterations: 1, Duration: 16 sec.
-//C Converted Double Precision Whetstones: 3125.0 MIPS	
-	loopstart = 200;		/* see the note about LOOP below */
-	continuous = 1;
-	II = 1;		/* start at the first arg (temp use of II here) */
+	One_Fifty       Int_1_Loc;
+  REG One_Fifty   Int_2_Loc;
+  One_Fifty       Int_3_Loc;
+  REG char        Ch_Index;
+  Enumeration     Enum_Loc;
+  Str_30          Str_1_Loc;
+  Str_30          Str_2_Loc;
+  REG int         Run_Index;
+  REG int         Number_Of_Runs;
 		
   /* Configure SysTick */
   SysTick_Config(SystemCoreClock/HZ);
 	
-	printf("LPC1768 Whetstone @ %u Hz %08X ARMCC:%u\n", 
+	printf("LPC1768 Dhrystone @ %u Hz %08X ARMCC:%u\n", 
 	SystemCoreClock, 
 	SCB->CPUID, 
 	__ARMCC_VERSION);
@@ -185,284 +190,253 @@ int main(void)
 	printf("With StandardLib\n");
 	#endif
 
-LCONT:
-/*
-C
-C	Start benchmark timing at this point.
-C
-*/
-	start_tick = HAL_GetTick();
+ /* Initializations */
+  Next_Ptr_Glob = (Rec_Pointer) malloc (sizeof (Rec_Type));
+  Ptr_Glob = (Rec_Pointer) malloc (sizeof (Rec_Type));
 
-/*
-C
-C	The actual benchmark starts here.
-C
-*/
-	T  = .499975;
-	T1 = 0.50025;
-	T2 = 2.0;
-/*
-C
-C	With loopcount LOOP=10, one million Whetstone instructions
-C	will be executed in EACH MAJOR LOOP..A MAJOR LOOP IS EXECUTED
-C	'II' TIMES TO INCREASE WALL-CLOCK TIMING ACCURACY.
-C
-	LOOP = 1000;
-*/
-	LOOP = loopstart;
-	II   = 1;
+  Ptr_Glob->Ptr_Comp                    = Next_Ptr_Glob;
+  Ptr_Glob->Discr                       = Ident_1;
+  Ptr_Glob->variant.var_1.Enum_Comp     = Ident_3;
+  Ptr_Glob->variant.var_1.Int_Comp      = 40;
+  strcpy (Ptr_Glob->variant.var_1.Str_Comp,
+          "DHRYSTONE PROGRAM, SOME STRING");
+  strcpy (Str_1_Loc, "DHRYSTONE PROGRAM, 1'ST STRING");
 
-	JJ = 1;
+  Arr_2_Glob [8][7] = 10;
+        /* Was missing in published program. Without this statement,    */
+        /* Arr_2_Glob [8][7] would have an undefined value.             */
+        /* Warning: With 16-Bit processors and Number_Of_Runs > 32000,  */
+        /* overflow may occur for this array element.                   */
 
-IILOOP:
-	N1  = 0;
-	N2  = 12 * LOOP;
-	N3  = 14 * LOOP;
-	N4  = 345 * LOOP;
-	N6  = 210 * LOOP;
-	N7  = 32 * LOOP;
-	N8  = 899 * LOOP;
-	N9  = 616 * LOOP;
-	N10 = 0;
-	N11 = 93 * LOOP;
-/*
-C
-C	Module 1: Simple identifiers
-C
-*/
-	X1  =  1.0;
-	X2  = -1.0;
-	X3  = -1.0;
-	X4  = -1.0;
-
-	for (I = 1; I <= N1; I++) {
-	    X1 = (X1 + X2 + X3 - X4) * T;
-	    X2 = (X1 + X2 - X3 + X4) * T;
-	    X3 = (X1 - X2 + X3 + X4) * T;
-	    X4 = (-X1+ X2 + X3 + X4) * T;
-	}
-#ifdef PRINTOUT
-	IF (JJ==II)POUT(N1,N1,N1,X1,X2,X3,X4);
-#endif
-
-/*
-C
-C	Module 2: Array elements
-C
-*/
-	E1[1] =  1.0;
-	E1[2] = -1.0;
-	E1[3] = -1.0;
-	E1[4] = -1.0;
-
-	for (I = 1; I <= N2; I++) {
-	    E1[1] = ( E1[1] + E1[2] + E1[3] - E1[4]) * T;
-	    E1[2] = ( E1[1] + E1[2] - E1[3] + E1[4]) * T;
-	    E1[3] = ( E1[1] - E1[2] + E1[3] + E1[4]) * T;
-	    E1[4] = (-E1[1] + E1[2] + E1[3] + E1[4]) * T;
-	}
-
-#ifdef PRINTOUT
-	IF (JJ==II)POUT(N2,N3,N2,E1[1],E1[2],E1[3],E1[4]);
-#endif
-
-/*
-C
-C	Module 3: Array as parameter
-C
-*/
-	for (I = 1; I <= N3; I++)
-		PA(E1);
-
-#ifdef PRINTOUT
-	IF (JJ==II)POUT(N3,N2,N2,E1[1],E1[2],E1[3],E1[4]);
-#endif
-
-/*
-C
-C	Module 4: Conditional jumps
-C
-*/
-	J = 1;
-	for (I = 1; I <= N4; I++) {
-		if (J == 1)
-			J = 2;
-		else
-			J = 3;
-
-		if (J > 2)
-			J = 0;
-		else
-			J = 1;
-
-		if (J < 1)
-			J = 1;
-		else
-			J = 0;
-	}
-
-#ifdef PRINTOUT
-	IF (JJ==II)POUT(N4,J,J,X1,X2,X3,X4);
-#endif
-
-/*
-C
-C	Module 5: Omitted
-C 	Module 6: Integer arithmetic
-C
-*/
-
-	J = 1;
-	K = 2;
-	L = 3;
-
-	for (I = 1; I <= N6; I++) {
-	    J = J * (K-J) * (L-K);
-	    K = L * K - (L-J) * K;
-	    L = (L-K) * (K+J);
-	    E1[L-1] = J + K + L;
-	    E1[K-1] = J * K * L;
-	}
-
-#ifdef PRINTOUT
-	IF (JJ==II)POUT(N6,J,K,E1[1],E1[2],E1[3],E1[4]);
-#endif
-
-/*
-C
-C	Module 7: Trigonometric functions
-C
-*/
-	X = 0.5;
-	Y = 0.5;
-
-	for (I = 1; I <= N7; I++) {
-		X = T * DATAN(T2*DSIN(X)*DCOS(X)/(DCOS(X+Y)+DCOS(X-Y)-1.0));
-		Y = T * DATAN(T2*DSIN(Y)*DCOS(Y)/(DCOS(X+Y)+DCOS(X-Y)-1.0));
-	}
-
-#ifdef PRINTOUT
-	IF (JJ==II)POUT(N7,J,K,X,X,Y,Y);
-#endif
-
-/*
-C
-C	Module 8: Procedure calls
-C
-*/
-	X = 1.0;
-	Y = 1.0;
-	Z = 1.0;
-
-	for (I = 1; I <= N8; I++)
-		P3(X,Y,&Z);
-
-#ifdef PRINTOUT
-	IF (JJ==II)POUT(N8,J,K,X,Y,Z,Z);
-#endif
-
-/*
-C
-C	Module 9: Array references
-C
-*/
-	J = 1;
-	K = 2;
-	L = 3;
-	E1[1] = 1.0;
-	E1[2] = 2.0;
-	E1[3] = 3.0;
-
-	for (I = 1; I <= N9; I++)
-		P0();
-
-#ifdef PRINTOUT
-	IF (JJ==II)POUT(N9,J,K,E1[1],E1[2],E1[3],E1[4]);
-#endif
-
-/*
-C
-C	Module 10: Integer arithmetic
-C
-*/
-	J = 2;
-	K = 3;
-
-	for (I = 1; I <= N10; I++) {
-	    J = J + K;
-	    K = J + K;
-	    J = K - J;
-	    K = K - J - J;
-	}
-
-#ifdef PRINTOUT
-	IF (JJ==II)POUT(N10,J,K,X1,X2,X3,X4);
-#endif
-
-/*
-C
-C	Module 11: Standard functions
-C
-*/
-	X = 0.75;
-
-	for (I = 1; I <= N11; I++)
-		X = DSQRT(DEXP(DLOG(X)/T1));
-
-#ifdef PRINTOUT
-	IF (JJ==II)POUT(N11,J,K,X,X,X,X);
-#endif
-
-/*
-C
-C      THIS IS THE END OF THE MAJOR LOOP.
-C
-*/
-	if (++JJ <= II)
-		goto IILOOP;
-
-/*
-C
-C      Stop benchmark timing at this point.
-C
-*/
-	fini_tick = HAL_GetTick();
-
-/*
-C----------------------------------------------------------------
-C      Performance in Whetstone KIP's per second is given by
-C
-C	(100*LOOP*II)/TIME
-C
-C      where TIME is in seconds.
-C--------------------------------------------------------------------
-*/
-	printf("\n");
-	if (fini_tick-start_tick <= 1000) {
-		printf("Insufficient duration- Increase the LOOP count\n");
-		return(1);
-	}
-
-	printf("Loops: %ld, Iterations: %d, Duration: %u/%u sec.\n",
-			LOOP, II, fini_tick-start_tick, 1000);
-
-	KIPS = (100.0*LOOP*II)/(float)((fini_tick-start_tick)/1000);
-	if (KIPS >= 1000.0)
-		printf("C Converted Double Precision Whetstones: %.2f MIPS\n", KIPS/1000.0);
-	else
-		printf("C Converted Double Precision Whetstones: %.2f KIPS\n", KIPS);
+  printf ("\n");
+  printf ("Dhrystone Benchmark, Version 2.1 (Language: C)\n");
+  printf ("\n");
 	
-	if (continuous)
-		goto LCONT;
+  if (Reg)
+  {
+    printf ("Program compiled with 'register' attribute\n");
+    printf ("\n");
+  }
+  else
+  {
+    printf ("Program compiled without 'register' attribute\n");
+    printf ("\n");
+  }
+  printf ("Please give the number of runs through the benchmark: ");
+  {
+//    int n = 100000;
+//    scanf ("%d", &n);
+    Number_Of_Runs = RUN_NUMBER;
+  }
+  printf ("\n");
+
+  printf( "Execution starts, %d runs through Dhrystone\n", Number_Of_Runs);
+  /***************/
+  /* Start timer */
+  /***************/
+
+#ifdef TIMES
+  times (&time_info);
+  Begin_Time = (long) time_info.tms_utime;
+#endif
+#ifdef TIME
+  Begin_Time = time ( (long *) 0);
+#endif
+#ifdef MSC_CLOCK
+  Begin_Time = g_Ticks;
+#endif
+
+  for (Run_Index = 1; Run_Index <= Number_Of_Runs; ++Run_Index)
+  {
+
+    Proc_5();
+    Proc_4();
+      /* Ch_1_Glob == 'A', Ch_2_Glob == 'B', Bool_Glob == true */
+    Int_1_Loc = 2;
+    Int_2_Loc = 3;
+    strcpy (Str_2_Loc, "DHRYSTONE PROGRAM, 2'ND STRING");
+    Enum_Loc = Ident_2;
+    Bool_Glob = ! Func_2 (Str_1_Loc, Str_2_Loc);
+      /* Bool_Glob == 1 */
+    while (Int_1_Loc < Int_2_Loc)  /* loop body executed once */
+    {
+      Int_3_Loc = 5 * Int_1_Loc - Int_2_Loc;
+        /* Int_3_Loc == 7 */
+      Proc_7 (Int_1_Loc, Int_2_Loc, &Int_3_Loc);
+        /* Int_3_Loc == 7 */
+      Int_1_Loc += 1;
+    } /* while */
+      /* Int_1_Loc == 3, Int_2_Loc == 3, Int_3_Loc == 7 */
+    Proc_8 (Arr_1_Glob, Arr_2_Glob, Int_1_Loc, Int_3_Loc);
+      /* Int_Glob == 5 */
+    Proc_1 (Ptr_Glob);
+    for (Ch_Index = 'A'; Ch_Index <= Ch_2_Glob; ++Ch_Index)
+                             /* loop body executed twice */
+    {
+      if (Enum_Loc == Func_1 (Ch_Index, 'C'))
+         /* then, not executed */
+      {
+        Proc_6 (Ident_1, &Enum_Loc);
+        strcpy (Str_2_Loc, "DHRYSTONE PROGRAM, 3'RD STRING");
+        Int_2_Loc = Run_Index;
+        Int_Glob = Run_Index;
+      }
+    }
+      /* Int_1_Loc == 3, Int_2_Loc == 3, Int_3_Loc == 7 */
+    Int_2_Loc = Int_2_Loc * Int_1_Loc;
+    Int_1_Loc = Int_2_Loc / Int_3_Loc;
+    Int_2_Loc = 7 * (Int_2_Loc - Int_3_Loc) - Int_1_Loc;
+      /* Int_1_Loc == 1, Int_2_Loc == 13, Int_3_Loc == 7 */
+    Proc_2 (&Int_1_Loc);
+      /* Int_1_Loc == 5 */
+
+  } /* loop "for Run_Index" */
+
+  /**************/
+  /* Stop timer */
+  /**************/
+
+#ifdef TIMES
+  times (&time_info);
+  End_Time = (long) time_info.tms_utime;
+#endif
+#ifdef TIME
+  End_Time = time ( (long *) 0);
+#endif
+#ifdef MSC_CLOCK
+  End_Time = g_Ticks;
+#endif
+
+  printf ("Execution ends\n");
+  printf ("\n");
+  printf ("Final values of the variables used in the benchmark:\n");
+  printf ("\n");
+  printf( "Int_Glob:            %d\n", Int_Glob);
+  printf("        should be:   %d\n", 5);
+  printf( "Bool_Glob:           %d\n", Bool_Glob);
+	
+  printf( "        should be:   %d\n", 1);
+	
+  printf("Ch_1_Glob:           %c\n", Ch_1_Glob);
+	
+  printf("        should be:   %c\n", 'A');
+	
+  printf("Ch_2_Glob:           %c\n", Ch_2_Glob);
+	
+  printf("        should be:   %c\n", 'B');
+	
+  printf("Arr_1_Glob[8]:       %d\n", Arr_1_Glob[8]);
+	
+  printf("        should be:   %d\n", 7);
+	
+  printf("Arr_2_Glob[8][7]:    %d\n", Arr_2_Glob[8][7]);
+	
+  printf ("        should be:   Number_Of_Runs + 10\n");
+  printf ("Ptr_Glob->\n");
+  printf("  Ptr_Comp:          %d\n", (int) Ptr_Glob->Ptr_Comp);
+	
+  printf ("        should be:   (implementation-dependent)\n");
+  printf("  Discr:             %d\n", Ptr_Glob->Discr);
+	
+ printf("        should be:   %d\n", 0);
+	
+  printf("  Enum_Comp:         %d\n", Ptr_Glob->variant.var_1.Enum_Comp);
+	
+ printf("        should be:   %d\n", 2);
+	
+  printf("  Int_Comp:          %d\n", Ptr_Glob->variant.var_1.Int_Comp);
+	
+  printf("        should be:   %d\n", 17);
+	
+  printf("  Str_Comp:          %s\n", Ptr_Glob->variant.var_1.Str_Comp);
+	
+  printf ("        should be:   DHRYSTONE PROGRAM, SOME STRING\n");
+  printf ("Next_Ptr_Glob->\n");
+  printf("  Ptr_Comp:          %d\n", (int) Next_Ptr_Glob->Ptr_Comp);
+	
+  printf ("        should be:   (implementation-dependent), same as above\n");
+ printf("  Discr:             %d\n", Next_Ptr_Glob->Discr);
+	
+  printf("        should be:   %d\n", 0);
+	
+  printf("  Enum_Comp:         %d\n", Next_Ptr_Glob->variant.var_1.Enum_Comp);
+	
+  printf("        should be:   %d\n", 1);
+	
+  printf("  Int_Comp:          %d\n", Next_Ptr_Glob->variant.var_1.Int_Comp);
+	
+  printf("        should be:   %d\n", 18);
+	
+  printf("  Str_Comp:          %s\n",
+                                Next_Ptr_Glob->variant.var_1.Str_Comp);
+	
+  printf ("        should be:   DHRYSTONE PROGRAM, SOME STRING\n");
+  printf("Int_1_Loc:           %d\n", Int_1_Loc);
+	
+  printf("        should be:   %d\n", 5);
+	
+  printf("Int_2_Loc:           %d\n", Int_2_Loc);
+	
+  printf("        should be:   %d\n", 13);
+	
+  printf("Int_3_Loc:           %d\n", Int_3_Loc);
+	
+  printf("        should be:   %d\n", 7);
+	
+  printf("Enum_Loc:            %d\n", Enum_Loc);
+	
+  printf("        should be:   %d\n", 1);
+	
+  printf("Str_1_Loc:           %s\n", Str_1_Loc);
+	
+  printf ("        should be:   DHRYSTONE PROGRAM, 1'ST STRING\n");
+  printf("Str_2_Loc:           %s\n", Str_2_Loc);
+	
+  printf ("        should be:   DHRYSTONE PROGRAM, 2'ND STRING\n");
+  printf ("\n");
+
+  User_Time = End_Time - Begin_Time;
+
+  if (User_Time < Too_Small_Time)
+  {
+		printf( "Measured time too small to obtain meaningful results %u-%u\n", Begin_Time, End_Time);
+    printf ("Please increase number of runs\n");
+  }
+  else
+  {
+#ifdef TIME
+    Microseconds = (float) User_Time * Mic_secs_Per_Second
+                        / (float) Number_Of_Runs;
+    Dhrystones_Per_Second = (float) Number_Of_Runs / (float) User_Time;
+#else
+    Microseconds = (float) User_Time * (float)Mic_secs_Per_Second
+                        / ((float) HZ * ((float) Number_Of_Runs));
+    Dhrystones_Per_Second = ((float) HZ * (float) Number_Of_Runs)
+                        / (float) User_Time;
+#endif
+		printf("Microseconds for one run through Dhrystone[%u-%u]:  ", Begin_Time, End_Time);
+
+    printf("%6.1f \n", Microseconds);
+	
+    printf ("Dhrystones per Second:                      ");
+    printf("%6.1f \n", Dhrystones_Per_Second);
+	
+  }
+	
+	printf("End of LPC1768 Dhrystone @ %u Hz %08X ARMCC:%u\n", 
+	SystemCoreClock, 
+	SCB->CPUID, 
+	__ARMCC_VERSION);
+	
+	#ifdef __MICROLIB
+	printf("With Microlib\n");
+	#else
+	printf("With StandardLib\n");
+	#endif
 	
 	while(1)
 	{
-		printf("%u\t%u\n", SystemCoreClock, g_Ticks);
-		SimpleDelay(10000);		
-		printf("%u\t%u\n", SystemCoreClock, g_Ticks);
-		SimpleDelay(10000);		
-		printf("%u\t%u\n", SystemCoreClock, g_Ticks);
-		SimpleDelay(10000);		
+		__WFI();
 	}
 	
 	return 0;
